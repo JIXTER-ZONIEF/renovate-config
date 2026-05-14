@@ -1,0 +1,25 @@
+name: Test RENOVATE_TOKEN
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Token shape
+        env:
+          T: ${{ secrets.RENOVATE_TOKEN }}
+        run: |
+          echo "len=${#T}"
+          echo "starts_with_ghp=$([[ "$T" == ghp_* ]] && echo yes || echo no)"
+          echo "first3=$(echo -n "$T" | head -c 3)"
+          echo "last3=$(echo -n "$T" | tail -c 3)"
+          echo "has_newline=$(echo -n "$T" | tr -cd '\n' | wc -c)"
+          echo "has_space=$(echo -n "$T" | tr -cd ' ' | wc -c)"
+
+      - name: Hit /user
+        env:
+          T: ${{ secrets.RENOVATE_TOKEN }}
+        run: |
+          curl -sS -w '\nHTTP:%{http_code}\n' -H "Authorization: token $T" https://api.github.com/user | tail -10
