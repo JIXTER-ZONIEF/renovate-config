@@ -1,0 +1,52 @@
+name: Renovate self-hosted
+
+on:
+  schedule:
+    # Lundi 6h Europe/Paris = 04:00 UTC (été) / 05:00 UTC (hiver). On part sur 04:00 UTC.
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Log level'
+        required: false
+        default: 'info'
+        type: choice
+        options: [debug, info, warn, error]
+      dryRun:
+        description: 'Dry run (no PRs created/merged, just report)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'extract', 'lookup', 'full']
+
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Self-hosted Renovate
+        uses: renovatebot/github-action@v46.1.13
+        with:
+          token: ${{ secrets.RENOVATE_TOKEN }}
+          configurationFile: renovate.json
+          renovate-version: latest
+        env:
+          LOG_LEVEL: ${{ inputs.logLevel || 'info' }}
+          RENOVATE_AUTODISCOVER: 'true'
+          RENOVATE_AUTODISCOVER_FILTER: 'JIXTER-ZONIEF/*'
+          RENOVATE_PLATFORM: 'github'
+          RENOVATE_GIT_AUTHOR: 'JIXTER Renovate <noreply@jixter.fr>'
+          RENOVATE_DRY_RUN: ${{ inputs.dryRun == 'false' && '' || inputs.dryRun }}
+          # Use the central config from this repo as default for all repos
+          RENOVATE_ONBOARDING_CONFIG: |
+            {
+              "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+              "extends": ["local>JIXTER-ZONIEF/renovate-config"]
+            }
