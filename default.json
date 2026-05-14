@@ -1,0 +1,143 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":separateMajorReleases",
+    ":prImmediately",
+    ":maintainLockFilesWeekly",
+    "group:monorepos",
+    "group:recommended",
+    "workarounds:all",
+    ":enableVulnerabilityAlertsWithLabel(security)"
+  ],
+  "timezone": "Europe/Paris",
+  "schedule": ["before 6am on monday"],
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "labels": ["dependencies"],
+  "rebaseWhen": "behind-base-branch",
+  "platformAutomerge": true,
+  "dependencyDashboardTitle": "Renovate Dashboard",
+  "dependencyDashboardOSVVulnerabilitySummary": "all",
+  "configMigration": true,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on the first day of the month"],
+    "automerge": true
+  },
+  "vulnerabilityAlerts": {
+    "labels": ["security", "dependencies"],
+    "automerge": true,
+    "schedule": [],
+    "prCreation": "immediate",
+    "minimumReleaseAge": "0 days"
+  },
+  "packageRules": [
+    {
+      "description": "Auto-merge non-major non-zero updates after 3 days quarantine",
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "matchCurrentVersion": "!/^0/",
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash",
+      "minimumReleaseAge": "3 days",
+      "groupName": "non-major dependencies",
+      "groupSlug": "all-minor-patch"
+    },
+    {
+      "description": "0.x versions: treat minors as breaking, hold for review",
+      "matchCurrentVersion": "/^0/",
+      "matchUpdateTypes": ["minor"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "Major bumps require manual approval via dashboard",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true,
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "description": "GitHub Actions: group + auto-merge",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "groupName": "github-actions",
+      "automerge": true,
+      "minimumReleaseAge": "3 days"
+    },
+    {
+      "description": "Docker base images digests: auto-merge weekly",
+      "matchManagers": ["dockerfile", "docker-compose"],
+      "matchUpdateTypes": ["digest", "pin"],
+      "groupName": "docker digests",
+      "automerge": true
+    },
+    {
+      "description": "Heavy frameworks: monthly cadence + manual approval",
+      "matchPackageNames": [
+        "/^org\\.springframework/",
+        "/^io\\.spring\\./",
+        "/^firebase/",
+        "/^com\\.google\\.firebase/",
+        "/firebase_/",
+        "/^@angular//"
+      ],
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true,
+      "schedule": ["before 6am on the first day of the month"]
+    },
+    {
+      "description": "Flutter SDK constraint changes: never auto",
+      "matchManagers": ["pub"],
+      "matchPackageNames": ["flutter", "dart"],
+      "enabled": false
+    },
+    {
+      "description": "Pub minor/patch grouped per app",
+      "matchManagers": ["pub"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchCurrentVersion": "!/^0/",
+      "groupName": "pub dependencies",
+      "automerge": true,
+      "minimumReleaseAge": "3 days"
+    },
+    {
+      "description": "Spotless plugin: auto-merge (formatter only)",
+      "matchPackageNames": ["com.diffplug.spotless:spotless-maven-plugin"],
+      "automerge": true,
+      "minimumReleaseAge": "1 day"
+    },
+    {
+      "description": "Test deps: auto-merge faster",
+      "matchDepTypes": ["test", "devDependencies"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "minimumReleaseAge": "1 day",
+      "groupName": "test dependencies"
+    }
+  ],
+  "java": {
+    "enabled": true
+  },
+  "maven": {
+    "enabled": true
+  },
+  "gradle": {
+    "enabled": true
+  },
+  "pub": {
+    "enabled": true
+  },
+  "npm": {
+    "minimumReleaseAge": "3 days"
+  },
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/.dart_tool/**",
+    "**/build/**",
+    "**/target/**",
+    "**/Pods/**",
+    "**/.gradle/**"
+  ]
+}
