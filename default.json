@@ -13,10 +13,10 @@
     ":enableVulnerabilityAlertsWithLabel(security)"
   ],
   "timezone": "Europe/Paris",
-  "schedule": ["before 6am on monday"],
+  "schedule": ["before 6am on weekdays"],
   "prConcurrentLimit": 5,
   "prHourlyLimit": 2,
-  "labels": ["dependencies"],
+  "labels": ["dependencies", "renovate"],
   "rebaseWhen": "behind-base-branch",
   "platformAutomerge": false,
   "ignoreTests": false,
@@ -55,10 +55,48 @@
       "dependencyDashboardApproval": true
     },
     {
-      "description": "Major bumps require manual approval via dashboard, 7d quarantine",
+      "description": "Major bumps require manual approval via dashboard, 7d quarantine, review zonief",
       "matchUpdateTypes": ["major"],
       "dependencyDashboardApproval": true,
-      "minimumReleaseAge": "7 days"
+      "minimumReleaseAge": "7 days",
+      "addLabels": ["major-update"],
+      "reviewers": ["zonief"]
+    },
+    {
+      "description": "Group Spring Boot ecosystem (minor/patch only - majors handled by heavy frameworks rule)",
+      "matchPackageNames": [
+        "/^org\\.springframework/",
+        "/^io\\.spring\\./",
+        "/^spring-/"
+      ],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Spring Boot ecosystem"
+    },
+    {
+      "description": "Group Firebase ecosystem (minor/patch)",
+      "matchPackageNames": [
+        "/firebase/",
+        "/^com\\.google\\.firebase/",
+        "/^firebase_/"
+      ],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Firebase ecosystem"
+    },
+    {
+      "description": "Group AWS SDK",
+      "matchPackageNames": [
+        "/^aws-sdk/",
+        "/^software\\.amazon\\.awssdk/",
+        "/^com\\.amazonaws/"
+      ],
+      "groupName": "AWS SDK"
+    },
+    {
+      "description": "Flutter/Dart packages : ne pas auto-merge majors (breaking risk)",
+      "matchManagers": ["pub"],
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "dependencyDashboardApproval": true
     },
     {
       "description": "GitHub Actions: group + auto-merge after 3d",
