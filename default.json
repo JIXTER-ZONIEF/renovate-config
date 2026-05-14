@@ -18,7 +18,8 @@
   "prHourlyLimit": 2,
   "labels": ["dependencies"],
   "rebaseWhen": "behind-base-branch",
-  "platformAutomerge": true,
+  "platformAutomerge": false,
+  "ignoreTests": false,
   "dependencyDashboardTitle": "Renovate Dashboard",
   "dependencyDashboardOSVVulnerabilitySummary": "all",
   "configMigration": true,
@@ -36,7 +37,7 @@
   },
   "packageRules": [
     {
-      "description": "Auto-merge non-major non-zero updates after 3 days quarantine",
+      "description": "Auto-merge non-major non-zero updates after 3 days quarantine. Renovate verifies all checks (no platformAutomerge dependency on branch protection).",
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
       "matchCurrentVersion": "!/^0/",
       "automerge": true,
@@ -53,13 +54,13 @@
       "dependencyDashboardApproval": true
     },
     {
-      "description": "Major bumps require manual approval via dashboard",
+      "description": "Major bumps require manual approval via dashboard, 7d quarantine",
       "matchUpdateTypes": ["major"],
       "dependencyDashboardApproval": true,
       "minimumReleaseAge": "7 days"
     },
     {
-      "description": "GitHub Actions: group + auto-merge",
+      "description": "GitHub Actions: group + auto-merge after 3d",
       "matchManagers": ["github-actions"],
       "matchUpdateTypes": ["minor", "patch", "digest"],
       "groupName": "github-actions",
@@ -74,7 +75,7 @@
       "automerge": true
     },
     {
-      "description": "Heavy frameworks: monthly cadence + manual approval",
+      "description": "Heavy frameworks: monthly cadence + manual approval for majors",
       "matchPackageNames": [
         "/^org\\.springframework/",
         "/^io\\.spring\\./",
@@ -103,7 +104,7 @@
       "minimumReleaseAge": "3 days"
     },
     {
-      "description": "Spotless plugin: auto-merge (formatter only)",
+      "description": "Spotless plugin: auto-merge (formatter only, no runtime risk)",
       "matchPackageNames": ["com.diffplug.spotless:spotless-maven-plugin"],
       "automerge": true,
       "minimumReleaseAge": "1 day"
@@ -115,6 +116,15 @@
       "automerge": true,
       "minimumReleaseAge": "1 day",
       "groupName": "test dependencies"
+    },
+    {
+      "description": "Cargo crates: standard auto-merge for minor/patch on stable (>=1.0)",
+      "matchManagers": ["cargo"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchCurrentVersion": "/^[1-9]/",
+      "automerge": true,
+      "minimumReleaseAge": "3 days",
+      "groupName": "cargo dependencies"
     }
   ],
   "java": {
