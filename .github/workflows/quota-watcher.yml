@@ -1,0 +1,98 @@
+name: Actions quota watcher
+
+# Surveille le quota Actions Linux GitHub-hosted (2000 min/mois free).
+# Bascule la org variable RUNNER_DEFAULT entre 'ubuntu-latest' et 'self-hosted'
+# pour que les workflows non-Flutter utilisent le mac-mini en cas de saturation.
+
+on:
+  schedule:
+    # Chaque jour à 00:30 UTC
+    - cron: '30 0 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force value (ubuntu-latest | self-hosted | auto)'
+        required: false
+        default: 'auto'
+        type: choice
+        options: [auto, ubuntu-latest, self-hosted]
+
+permissions:
+  contents: read
+
+env:
+  ORG: JIXTER-ZONIEF
+  ORG_ID: 275542466
+  QUOTA_MINUTES: 2000
+  HIGH_WATERMARK: 0.80   # 80% -> bascule self-hosted
+  LOW_WATERMARK: 0.60    # 60% -> retour ubuntu-latest (hystérésis)
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Compute usage and decide runner
+        id: decide
+        env:
+          GH_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+        run: |
+          set -e
+          YEAR=$(date -u +%Y)
+          MONTH=$(date -u +%-m)
+          DAY=$(date -u +%-d)
+
+          MINUTES=$(gh api "/organizations/${ORG_ID}/settings/billing/usage?year=${YEAR}&month=${MONTH}" \
+            --jq '[.usageItems[] | select(.sku == "Actions Linux") | .quantity] | add // 0')
+
+          USAGE_RATIO=$(awk -v m="$MINUTES" -v q="$QUOTA_MINUTES" 'BEGIN{printf "%.4f", m/q}')
+          USAGE_PCT=$(awk -v m="$MINUTES" -v q="$QUOTA_MINUTES" 'BEGIN{printf "%.1f", (m/q)*100}')
+
+          CURRENT=$(gh api "/orgs/${ORG}/actions/variables/RUNNER_DEFAULT" --jq '.value' 2>/dev/null || echo "ubuntu-latest")
+
+          FORCE="${{ inputs.force }}"
+          if [ "$FORCE" = "ubuntu-latest" ] || [ "$FORCE" = "self-hosted" ]; then
+            DECISION="$FORCE"
+            REASON="forced via workflow_dispatch input"
+          elif [ "$DAY" = "1" ]; then
+            DECISION="ubuntu-latest"
+            REASON="day 1 of month, quota reset"
+          elif awk -v r="$USAGE_RATIO" -v t="$HIGH_WATERMARK" 'BEGIN{exit !(r >= t)}'; then
+            DECISION="self-hosted"
+            REASON="usage ${USAGE_PCT}% >= $(awk -v t="$HIGH_WATERMARK" 'BEGIN{print t*100}')%"
+          elif awk -v r="$USAGE_RATIO" -v t="$LOW_WATERMARK" 'BEGIN{exit !(r < t)}'; then
+            DECISION="ubuntu-latest"
+            REASON="usage ${USAGE_PCT}% < $(awk -v t="$LOW_WATERMARK" 'BEGIN{print t*100}')%"
+          else
+            DECISION="$CURRENT"
+            REASON="usage ${USAGE_PCT}% in hysteresis band, keep current"
+          fi
+
+          echo "## Quota watcher report" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Current month: ${YEAR}-${MONTH} (day ${DAY})" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Linux minutes used: ${MINUTES} / ${QUOTA_MINUTES} (${USAGE_PCT}%)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Current RUNNER_DEFAULT: \`${CURRENT}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Decision: \`${DECISION}\` (${REASON})" >> "$GITHUB_STEP_SUMMARY"
+
+          {
+            echo "minutes=${MINUTES}"
+            echo "pct=${USAGE_PCT}"
+            echo "current=${CURRENT}"
+            echo "decision=${DECISION}"
+            echo "reason=${REASON}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Apply decision
+        if: steps.decide.outputs.current != steps.decide.outputs.decision
+        env:
+          GH_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+        run: |
+          set -e
+          gh api -X PATCH "/orgs/${ORG}/actions/variables/RUNNER_DEFAULT" \
+            -f name=RUNNER_DEFAULT \
+            -f value="${{ steps.decide.outputs.decision }}" \
+            -f visibility=all
+          echo "RUNNER_DEFAULT changed: ${{ steps.decide.outputs.current }} -> ${{ steps.decide.outputs.decision }}"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo ":arrows_counterclockwise: **Variable updated**: \`${{ steps.decide.outputs.current }}\` -> \`${{ steps.decide.outputs.decision }}\`" >> "$GITHUB_STEP_SUMMARY"
