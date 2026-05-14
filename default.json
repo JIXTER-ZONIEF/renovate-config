@@ -95,6 +95,17 @@
       "enabled": false
     },
     {
+      "description": "Flutter Gradle plugins (loader/embedding) live in the local Flutter SDK, not on Maven Central. Ignore lookup failures.",
+      "matchManagers": ["gradle", "gradle-wrapper"],
+      "matchPackageNames": [
+        "/^dev\\.flutter\\./",
+        "/^io\\.flutter\\./",
+        "dev.flutter.flutter-plugin-loader",
+        "dev.flutter.flutter-gradle-plugin"
+      ],
+      "enabled": false
+    },
+    {
       "description": "Pub minor/patch grouped per app",
       "matchManagers": ["pub"],
       "matchUpdateTypes": ["minor", "patch"],
