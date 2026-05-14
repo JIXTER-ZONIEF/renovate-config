@@ -18,6 +18,11 @@ on:
         default: 'false'
         type: choice
         options: ['false', 'extract', 'lookup', 'full']
+      ignoreSchedules:
+        description: 'Ignore schedule constraints (create PRs immediately, useful for one-off catch-up)'
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: renovate
@@ -44,6 +49,7 @@ jobs:
           RENOVATE_PLATFORM: 'github'
           RENOVATE_GIT_AUTHOR: 'JIXTER Renovate <noreply@jixter.fr>'
           RENOVATE_DRY_RUN: ${{ inputs.dryRun == 'false' && '' || inputs.dryRun }}
+          RENOVATE_IGNORE_SCHEDULES: ${{ inputs.ignoreSchedules || 'false' }}
           # Use the central config from this repo as default for all repos
           RENOVATE_ONBOARDING_CONFIG: |
             {
